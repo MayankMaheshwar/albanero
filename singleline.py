@@ -9,7 +9,7 @@ app = Flask(__name__)
 @app.route("/download", methods=["GET"])
 def download_csv():
     csv_url = request.args.get("csv_url")
-    words_per_file = int(request.args.get("rows_per_file"))
+    lines_per_file = int(request.args.get("lines_per_file"))
 
     csv_response = requests.get(csv_url, stream=True)
 
@@ -18,20 +18,19 @@ def download_csv():
     response.headers["Content-Disposition"] = "attachment; filename=output.zip"
 
     zip_buffer = io.BytesIO()
-
     with zipfile.ZipFile(
         zip_buffer, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True
     ) as zip_file:
-        cur_index = 0
+        lines_count = 0
         small_file_count = 0
         small_file_buffer = io.StringIO()
         line = csv_response.readline().strip()
-        words = line.split('|')
-
-            cur_index += 1
+        words = line.split("|")
+        for line in iter(words):
+            lines_count += 1
             small_file_buffer.write(line.decode("utf-8"))
             small_file_buffer.write("\n")
-            if line_count % rows_per_file == 0:
+            if line_count % lines_per_file == 0:
                 small_file_count += 1
                 small_file_buffer.seek(0)
                 zip_file.writestr(
